@@ -1,0 +1,59 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Browser window -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,34h52c2.2,0 4,1.8 4,4v38c0,2.2 -1.8,4 -4,4H28c-2.2,0 -4,-1.8 -4,-4V38c0,-2.2 1.8,-4 4,-4z" />
+
+    <!-- Title bar -->
+    <path
+        android:fillColor="#EFF6FF"
+        android:pathData="M24,38h60v10H24z" />
+
+    <!-- Window dots -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M30,41m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M38,41m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M46,41m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+
+    <!-- Globe circle -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M54,58m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+
+    <!-- Globe meridians -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M54,44c-3.9,4.2 -6,9.5 -6,14s2.1,9.8 6,14c3.9,-4.2 6,-9.5 6,-14s-2.1,-9.8 -6,-14z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M40,58h28"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M42,52h24M42,64h24"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+
+    <!-- WWW text hint lines -->
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M34,54h8v2h-8zM34,58h12v2h-12zM34,62h6v2h-6z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M66,54h8v2h-8zM62,58h12v2h-12zM68,62h6v2h-6z" />
+
+</vector>

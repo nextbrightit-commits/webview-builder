@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#0F172A</color>
+    <color name="text_primary">#F1F5F9</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="offline_bg_top">#052E16</color>
+    <color name="offline_bg_bottom">#0F172A</color>
+    <color name="offline_card_bg">#1E293B</color>
+    <color name="offline_card_stroke">#166534</color>
+    <color name="offline_footer_text">#64748B</color>
+    <color name="offline_badge_bg">#450A0A</color>
+    <color name="offline_badge_text">#FCA5A5</color>
+    <color name="offline_icon_circle">#14532D</color>
+    <color name="offline_tip_icon_bg">#052E16</color>
+</resources>

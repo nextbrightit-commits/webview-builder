@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_start">#15803D</color>
+    <color name="splash_center">#16A34A</color>
+    <color name="splash_end">#22C55E</color>
+
+    <color name="primary">#16A34A</color>
+    <color name="primary_dark">#15803D</color>
+    <color name="primary_light">#22C55E</color>
+    <color name="accent_orange">#F97316</color>
+    <color name="background">#FFFFFF</color>
+    <color name="white">#FFFFFF</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="offline_icon">#9CA3AF</color>
+    <color name="progress_track">#E5E7EB</color>
+    <color name="offline_bg_top">#F0FDF4</color>
+    <color name="offline_bg_bottom">#ECFDF5</color>
+    <color name="offline_card_bg">#FFFFFF</color>
+    <color name="offline_card_stroke">#BBF7D0</color>
+    <color name="offline_footer_text">#6B7280</color>
+    <color name="offline_badge_bg">#FEE2E2</color>
+    <color name="offline_badge_text">#DC2626</color>
+    <color name="offline_icon_circle">#DCFCE7</color>
+    <color name="offline_tip_icon_bg">#F0FDF4</color>
+    <color name="icon_gradient_start">#15803D</color>
+    <color name="icon_gradient_end">#22C55E</color>
+</resources>

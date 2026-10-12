@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="splash_tagline">আপনার অনলাইন শপ</string>
+    <string name="splash_loading_message">অ্যাপ লোড হচ্ছে…</string>
+    <string name="app_version">Version 1.0.0</string>
+    <string name="exit_dialog_title">অ্যাপ বন্ধ করুন</string>
+    <string name="exit_dialog_message">আপনি কি নিশ্চিতভাবে অ্যাপ বন্ধ করতে চাচ্ছেন?</string>
+    <string name="exit_dialog_yes">হ্যাঁ, বন্ধ করুন</string>
+    <string name="exit_dialog_no">না, থাকুন</string>
+</resources>
