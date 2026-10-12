@@ -1,0 +1,199 @@
+name: Build WebView App
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_url:
+        description: URL to download prepared project zip
+        required: true
+        type: string
+      callback_url:
+        description: URL to POST build result
+        required: true
+        type: string
+      callback_secret:
+        description: Shared secret for callback auth
+        required: true
+        type: string
+      app_id:
+        description: Webview app ID
+        required: true
+        type: string
+      mode:
+        description: debug, release, or all
+        required: true
+        type: string
+      generate_keystore:
+        description: Generate release keystore if missing (true/false)
+        required: false
+        type: string
+        default: "false"
+      app_name:
+        description: App name for keystore DN
+        required: false
+        type: string
+        default: "WebView App"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download build bundle
+        run: |
+          curl -fsSL "${{ inputs.bundle_url }}" -o /tmp/bundle.zip
+          mkdir -p /tmp/project
+          unzip -q /tmp/bundle.zip -d /tmp/project
+          ls -la /tmp/project
+
+      - name: Generate keystore if needed
+        if: inputs.generate_keystore == 'true'
+        run: |
+          cd /tmp/project
+          if [ ! -f keystore.properties ]; then
+            mkdir -p keystore
+            STORE_PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)
+            keytool -genkeypair -v \
+              -keystore keystore/release.jks \
+              -storetype JKS \
+              -alias release \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$STORE_PASS" -keypass "$STORE_PASS" \
+              -dname "CN=${{ inputs.app_name }}, OU=Nutun it, O=Nutun it, L=Dhaka, C=BD"
+            {
+              echo "storeFile=keystore/release.jks"
+              echo "storePassword=$STORE_PASS"
+              echo "keyAlias=release"
+              echo "keyPassword=$STORE_PASS"
+            } > keystore.properties
+            echo "KEYSTORE_STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK/AAB
+        id: gradle
+        run: |
+          cd /tmp/project
+          chmod +x gradlew
+          set -o pipefail
+          if [ "${{ inputs.mode }}" = "debug" ]; then
+            ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle.log
+          elif [ "${{ inputs.mode }}" = "all" ]; then
+            ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon 2>&1 | tee /tmp/gradle.log
+          else
+            ./gradlew assembleRelease bundleRelease --no-daemon 2>&1 | tee /tmp/gradle.log
+          fi
+
+      - name: Collect artifacts
+        id: artifacts
+        run: |
+          cd /tmp/project
+          mkdir -p /tmp/artifacts
+          echo "=== APK / AAB outputs ==="
+          find app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) -print || true
+
+          RELEASE_APK=""
+          DEBUG_APK=""
+          AAB=""
+
+          for f in app/build/outputs/apk/release/*.apk; do
+            [ -f "$f" ] || continue
+            RELEASE_APK="$f"
+            cp -f "$f" /tmp/artifacts/app-release.apk
+            break
+          done
+          for f in app/build/outputs/apk/debug/*.apk; do
+            [ -f "$f" ] || continue
+            DEBUG_APK="$f"
+            cp -f "$f" /tmp/artifacts/app-debug.apk
+            break
+          done
+          for f in app/build/outputs/bundle/release/*.aab; do
+            [ -f "$f" ] || continue
+            AAB="$f"
+            cp -f "$f" /tmp/artifacts/app-release.aab
+            break
+          done
+
+          if [ "${{ inputs.generate_keystore }}" = "true" ] && [ -f keystore/release.jks ]; then
+            cp -f keystore/release.jks /tmp/artifacts/release.jks
+            printf '%s' "$KEYSTORE_STORE_PASS" > /tmp/artifacts/keystore-store-password.txt
+          fi
+
+          if [ -z "$RELEASE_APK" ] && [ -z "$DEBUG_APK" ]; then
+            echo "ERROR: Gradle finished but no APK file was produced."
+            exit 1
+          fi
+
+          ls -lah /tmp/artifacts
+          echo "release_apk=$RELEASE_APK" >> "$GITHUB_OUTPUT"
+          echo "debug_apk=$DEBUG_APK" >> "$GITHUB_OUTPUT"
+          echo "aab=$AAB" >> "$GITHUB_OUTPUT"
+
+      # cPanel upload limit এড়াতে — APK GitHub-এ রাখা, সার্ভার পরে নামিয়ে নেবে
+      - name: Upload GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webview-app-${{ inputs.app_id }}
+          path: /tmp/artifacts/
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Notify site (lightweight — no large APK upload)
+        if: success()
+        run: |
+          tail -c 12000 /tmp/gradle.log > /tmp/gradle-tail.txt
+
+          CURL_ARGS=(
+            -sS -f --connect-timeout 30 --max-time 120
+            -X POST "${{ inputs.callback_url }}"
+            -H "X-Build-Secret: ${{ inputs.callback_secret }}"
+            -H "Accept: application/json"
+            -H "User-Agent: GitHub-Actions-WebView-Build/1.0"
+            -F "status=success"
+            -F "app_id=${{ inputs.app_id }}"
+            -F "github_run_id=${{ github.run_id }}"
+            -F "log=</tmp/gradle-tail.txt"
+            -o /tmp/callback-response.txt
+            -w "\nHTTP_CODE:%{http_code}\n"
+          )
+
+          if [ "${{ inputs.generate_keystore }}" = "true" ] && [ -n "${KEYSTORE_STORE_PASS:-}" ]; then
+            CURL_ARGS+=(-F "keystore_store_password=${KEYSTORE_STORE_PASS}")
+            CURL_ARGS+=(-F "keystore_key_password=${KEYSTORE_STORE_PASS}")
+            CURL_ARGS+=(-F "keystore_alias=release")
+          fi
+
+          curl "${CURL_ARGS[@]}"
+          echo "Callback response:"
+          cat /tmp/callback-response.txt || true
+          if ! grep -q '"ok":true\|"ok": true' /tmp/callback-response.txt 2>/dev/null; then
+            echo "ERROR: Site callback failed. Deploy latest PHP callback (artifact pull) and ensure GitHub token has actions:read."
+            exit 1
+          fi
+
+      - name: Report failure to site
+        if: failure()
+        run: |
+          if [ -f /tmp/gradle.log ]; then
+            tail -c 12000 /tmp/gradle.log > /tmp/gradle-tail.txt
+          else
+            echo "Build failed before Gradle finished." > /tmp/gradle-tail.txt
+          fi
+          curl -sS --connect-timeout 30 --max-time 120 -X POST "${{ inputs.callback_url }}" \
+            -H "X-Build-Secret: ${{ inputs.callback_secret }}" \
+            -H "Accept: application/json" \
+            -H "User-Agent: GitHub-Actions-WebView-Build/1.0" \
+            -F "status=failed" \
+            -F "app_id=${{ inputs.app_id }}" \
+            -F "github_run_id=${{ github.run_id }}" \
+            -F "log=</tmp/gradle-tail.txt" || true
