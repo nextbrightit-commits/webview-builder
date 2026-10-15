@@ -46,11 +46,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-        with:
-          cmdline-tools-version: 9477386
-          packages: platform-tools "platforms;android-34" "build-tools;34.0.0"
+      - name: Setup Android SDK (preinstalled + required packages)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_HOME" || true
+          # GitHub runner-এ SDK আগে থেকেই থাকে — শুধু দরকারি package ইনস্টল করি
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "sdk.dir=$ANDROID_HOME" > /tmp/localprops
+          echo "=== installed packages ==="
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed | tail -n 20
 
       - name: Download build bundle
         run: |
