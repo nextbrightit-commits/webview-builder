@@ -59,7 +59,20 @@ jobs:
 
       - name: Download build bundle
         run: |
-          curl -fsSL "${{ inputs.bundle_url }}" -o /tmp/bundle.zip
+          echo "Bundle URL host: $(echo '${{ inputs.bundle_url }}' | cut -d/ -f3)"
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i/5..."
+            if curl -fsSL --connect-timeout 30 --max-time 300 --retry 2 "${{ inputs.bundle_url }}" -o /tmp/bundle.zip; then
+              break
+            fi
+            echo "Attempt $i failed (HTTP code: $?). Retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -s /tmp/bundle.zip ]; then
+            echo "ERROR: Could not download build bundle after 5 attempts."
+            echo "Check: (1) site APP_URL is public (not localhost), (2) bundle route is reachable, (3) app status is 'building'."
+            exit 1
+          fi
           mkdir -p /tmp/project
           unzip -q /tmp/bundle.zip -d /tmp/project
           ls -la /tmp/project
