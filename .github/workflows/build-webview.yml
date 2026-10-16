@@ -54,7 +54,6 @@ jobs:
           # GitHub runner-এ SDK আগে থেকেই থাকে — শুধু দরকারি package ইনস্টল করি
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          echo "sdk.dir=$ANDROID_HOME" > /tmp/localprops
           echo "=== installed packages ==="
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed | tail -n 20
 
@@ -65,12 +64,18 @@ jobs:
           unzip -q /tmp/bundle.zip -d /tmp/project
           ls -la /tmp/project
 
-      - name: Generate keystore if needed
-        if: inputs.generate_keystore == 'true'
+      - name: Setup keystore (reuse bundle keystore or generate new)
         run: |
           cd /tmp/project
-          if [ ! -f keystore.properties ]; then
-            mkdir -p keystore
+          mkdir -p keystore
+          # ১. bundle-এর সাথে পুরনো keystore এলে সেটাই ব্যবহার করো (একই সাইনিং = আপডেট install হবে)
+          if [ -f keystore/release.jks ] && [ -f keystore.properties ]; then
+            echo "Reusing keystore from bundle."
+            STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d'=' -f2-)
+            echo "KEYSTORE_STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEYSTORE_REUSED=true" >> "$GITHUB_ENV"
+          elif [ "${{ inputs.generate_keystore }}" = "true" ]; then
+          # ২. না থাকলে + অনুমতি থাকলে নতুন বানাও
             STORE_PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)
             keytool -genkeypair -v \
               -keystore keystore/release.jks \
@@ -86,6 +91,11 @@ jobs:
               echo "keyPassword=$STORE_PASS"
             } > keystore.properties
             echo "KEYSTORE_STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEYSTORE_REUSED=false" >> "$GITHUB_ENV"
+          else
+            # ৩. keystore নেই + বানানোর অনুমতি নেই = release signing ছাড়া build করো (debug APK/AAB আসবে)
+            rm -f keystore.properties
+            echo "No keystore available — building unsigned (debug outputs only)."
           fi
 
       - name: Build APK/AAB
@@ -133,7 +143,7 @@ jobs:
             break
           done
 
-          if [ "${{ inputs.generate_keystore }}" = "true" ] && [ -f keystore/release.jks ]; then
+          if [ -f keystore/release.jks ]; then
             cp -f keystore/release.jks /tmp/artifacts/release.jks
             printf '%s' "$KEYSTORE_STORE_PASS" > /tmp/artifacts/keystore-store-password.txt
           fi
@@ -176,7 +186,7 @@ jobs:
             -w "\nHTTP_CODE:%{http_code}\n"
           )
 
-          if [ "${{ inputs.generate_keystore }}" = "true" ] && [ -n "${KEYSTORE_STORE_PASS:-}" ]; then
+          if [ -n "${KEYSTORE_STORE_PASS:-}" ]; then
             CURL_ARGS+=(-F "keystore_store_password=${KEYSTORE_STORE_PASS}")
             CURL_ARGS+=(-F "keystore_key_password=${KEYSTORE_STORE_PASS}")
             CURL_ARGS+=(-F "keystore_alias=release")
